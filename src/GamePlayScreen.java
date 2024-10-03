@@ -24,6 +24,7 @@ public class GamePlayScreen{
     private ArrayList<Weather> weathers;
     private Background background1;
     private Background background2;
+    private ArrayList<EnemyCar> enemyCars;
 
     private final float TARGET;
     private final int MAX_FRAMES;
@@ -56,6 +57,7 @@ public class GamePlayScreen{
         // read game objects from file and weather file and populate the game objects and weather conditions
         ArrayList<String[]> weatherLines = IOUtils.readCommaSeperatedFile("res/gameWeather.csv");
         weathers = new ArrayList<>();
+        enemyCars = new ArrayList<>();
         populateWeather(weatherLines);
         ArrayList<String[]> objectLines = IOUtils.readCommaSeperatedFile(gameProps.getProperty("gamePlay.objectsFile"));
         populateGameObjects(objectLines);
@@ -127,7 +129,8 @@ public class GamePlayScreen{
             int y = Integer.parseInt(lineElement[2]);
 
             if(lineElement[0].equals(GameObjectType.TAXI.name())) {
-                taxi = new Taxi(x, y, passengerCount, this.GAME_PROPS);
+                taxi = new Taxi(x, y, GameObjectType.TAXI.name(), passengerCount, this.GAME_PROPS);
+                taxi.setIsActive();
             } else if(lineElement[0].equals(GameObjectType.PASSENGER.name())) {
                 int priority = Integer.parseInt(lineElement[3]);
                 int travelEndX = Integer.parseInt(lineElement[4]);
@@ -165,8 +168,19 @@ public class GamePlayScreen{
 
         tempEnemyCar = Car.checkAndGenerate(tempEnemyCar, GAME_PROPS);
 
+        if(tempEnemyCar != null) {
+            enemyCars.add(tempEnemyCar);
+        }
+
         for(Passenger passenger: passengers) {
             passenger.updateWithTaxi(input, taxi);
+        }
+        if (enemyCars != null) {
+            for (int i = 0; i < enemyCars.size(); i++) {
+                EnemyCar thisEnemyCar = enemyCars.get(i);
+                thisEnemyCar.updateCollision(enemyCars, taxi);
+                thisEnemyCar.update(input);
+            }
         }
 
         taxi.update(input);

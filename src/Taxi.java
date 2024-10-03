@@ -16,8 +16,9 @@ public class Taxi extends Car implements Generatable<Taxi>{
 
     private Coin coinPower;
     private Trip trip;
+    private boolean isActive;
 
-    public Taxi(int x, int y, int maxTripCount, Properties props) {
+    public Taxi(int x, int y, String type, int maxTripCount, Properties props) {
         super(x, y, GameObjectType.TAXI.name(), props);
         TRIPS = new Trip[maxTripCount];
     }
@@ -55,7 +56,14 @@ public class Taxi extends Car implements Generatable<Taxi>{
         } else if(input.wasReleased(Keys.LEFT) || input.wasReleased(Keys.RIGHT)) {
             isMovingX = false;
         }
+        if(input.isDown(Keys.UP)) {
+            isMovingY = true;
+        }else {
+            isMovingY = false;
+        }
     }
+    public boolean getIsActive() {return isActive;}
+    public void setIsActive() { this.isActive = true; }
 
     /**
      * Get the last trip from the list of trips.
@@ -88,11 +96,17 @@ public class Taxi extends Car implements Generatable<Taxi>{
             }
             tp.setPriority(newPriority);
         }
-
-        if(input != null) {
+        super.updateCollision(input);
+        if(input != null && isActive) {
             setMovingXY(input);
             adjustToInputMovement(input);
+        }else if(input != null){
+            super.adjustToInputMovement(input);
+            move();
         }
+        setTimeOutY(-1);
+
+        super.checkInvincibility();
 
         if(trip != null && trip.hasReachedEnd()) {
             getTrip().end();
@@ -108,6 +122,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
             }
         }
 
+
     }
 
 
@@ -118,19 +133,20 @@ public class Taxi extends Car implements Generatable<Taxi>{
      * If the taxi does not have a driver, the taxi can move in all directions.
      * @param input The current mouse/keyboard input.
      */
-    /**
-     public void adjustToInputMovement(Input input) {
-     if(input.isDown(Keys.LEFT)) {
-     x -= SPEED_X;
-     isMovingX = true;
-     }  else if(input.isDown(Keys.RIGHT)) {
-     x += SPEED_X;
-     isMovingX =  true;
-     } else if(input.wasReleased(Keys.LEFT) || input.wasReleased(Keys.RIGHT)) {
-     isMovingX = false;
-     }
-     }
-     */
+    @Override
+    public void adjustToInputMovement(Input input) {
+        if(input != null) {
+            if (input.isDown(Keys.LEFT)) {
+                super.setX( super.getX() -Integer.parseInt(getProps().getProperty("gameObjects.taxi.speedX")));
+                isMovingX = true;
+            } else if (input.isDown(Keys.RIGHT)) {
+                super.setX(super.getX() + Integer.parseInt(getProps().getProperty("gameObjects.taxi.speedX")));
+                isMovingX = true;
+            } else if (input.wasReleased(Keys.LEFT) || input.wasReleased(Keys.RIGHT)) {
+                isMovingX = false;
+            }
+        }
+    }
     public void collectPower(Coin coin) {
         coinPower = coin;
     }
@@ -156,6 +172,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
 
     @Override
     public Taxi toGenerate(Properties props){
-        return new Taxi(-1,-1,-1, props);
+        return new Taxi(-1,-1,null, -1, props);
     }
+
 }

@@ -3,6 +3,7 @@ import bagel.Input;
 import bagel.Keys;
 
 import javax.lang.model.element.ModuleElement;
+import java.util.ArrayList;
 import java.util.Properties;
 public class EnemyCar extends Car implements Generatable<EnemyCar>{
     private final static int DIVISIBILITY = 400;
@@ -10,6 +11,7 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
     private final static int SPAWN_Y_2 = 768;
 
     public EnemyCar(int x, int y, Properties props) {
+
         super(x, y, GameObjectType.ENEMY_CAR.name(), props);
     }
 
@@ -26,13 +28,28 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
         }else{
             newX = 0;
         }
-        int newY = MiscUtils.getRandomInt(SPAWN_Y_1, SPAWN_Y_2);
-        return new EnemyCar(newX, newY, props);
+        int newY = MiscUtils.selectAValue(SPAWN_Y_1, SPAWN_Y_2);
+        EnemyCar newEnemyCar = new EnemyCar(newX, newY, props);
+        newEnemyCar.assignSpeed();
+        return newEnemyCar;
     }
 
     @Override
     public boolean checkGeneratability(){
         return MiscUtils.canSpawn(DIVISIBILITY);
     }
+
+    /**
+     * check Collision with other objects
+     */
+    public void updateCollision(ArrayList<EnemyCar> enemyCars, Taxi taxi) {
+        for(EnemyCar enemyCar : enemyCars){
+            checkCollision(this, enemyCar);
+        }
+        checkCollision(this, taxi);
+    }
+
+
+
 
 }
