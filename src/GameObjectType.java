@@ -8,4 +8,12 @@ public enum GameObjectType {
     DRIVER,
     ENEMY_CAR,
     OTHER_CAR,
+    TRIP_END_FLAG,
+    SMOKE,
+    FIRE,
+    BLOOD,
+    STAR,
+    FIRE_BALL,
+    INVINCIBLE_POWER,
+    BROKEN_TAXI,
 }

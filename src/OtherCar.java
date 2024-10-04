@@ -5,19 +5,18 @@ import bagel.Keys;
 import javax.lang.model.element.ModuleElement;
 import java.util.ArrayList;
 import java.util.Properties;
-public class EnemyCar extends Car implements Generatable<EnemyCar>{
-    private final static int DIVISIBILITY = 400;
+public class OtherCar extends Car implements Generatable<OtherCar>{
+    private final static int DIVISIBILITY = 200;
     private final static int SPAWN_Y_1 = -50;
     private final static int SPAWN_Y_2 = 768;
 
-    public EnemyCar(int x, int y, Properties props) {
-
-        super(x, y, GameObjectType.ENEMY_CAR.name(), props);
+    public OtherCar(int x, int y, Properties props) {
+        super(x, y, GameObjectType.OTHER_CAR.name(), props);
     }
 
     @Override
-    public EnemyCar toGenerate(Properties props){
-        int laneNumber = MiscUtils.getRandomInt(1, 3);
+    public OtherCar toGenerate(Properties props){
+        int laneNumber = MiscUtils.getRandomInt(1, 4);
         int newX;
         if(laneNumber == 1){
             newX = Integer.parseInt(super.getProps().getProperty("roadLaneCenter1"));
@@ -29,9 +28,9 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
             newX = 0;
         }
         int newY = MiscUtils.selectAValue(SPAWN_Y_1, SPAWN_Y_2);
-        EnemyCar newEnemyCar = new EnemyCar(newX, SPAWN_Y_2 , props);
-        newEnemyCar.assignSpeed();
-        return newEnemyCar;
+        OtherCar newOtherCar = new OtherCar(newX, SPAWN_Y_2 , props);
+        newOtherCar.assignSpeed();
+        return newOtherCar;
     }
 
     @Override
@@ -42,14 +41,11 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
     /**
      * check Collision with other objects
      */
-    public void updateCollision(ArrayList<EnemyCar> enemyCars, Taxi taxi) {
-        for(EnemyCar enemyCar : enemyCars){
-            checkCollision(this, enemyCar);
+    public void updateCollision(ArrayList<OtherCar> otherCars, Taxi taxi) {
+        for(OtherCar otherCar : otherCars){
+            checkCollision(this, otherCar);
         }
         checkCollision(this, taxi);
     }
-
-
-
 
 }

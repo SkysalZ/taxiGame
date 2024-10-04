@@ -24,6 +24,8 @@ public abstract class Car implements Collidable{
     private boolean invincible;
     private int timeOutY;
     private int collisionTime;
+    private Smoke smoke;
+    private Fire fire;
 
     private int x;
     private int y;
@@ -46,10 +48,11 @@ public abstract class Car implements Collidable{
             this.DAMAGE = (int) Float.parseFloat(props.getProperty("gameObjects.taxi.damage")) * 100;
         }else if(type.equals(GameObjectType.ENEMY_CAR.name())){
             this.IMAGE = new Image(props.getProperty("gameObjects.enemyCar.image"));
-            this.DAMAGE = (int) Float.parseFloat(props.getProperty("gameObjects.enemyCar.damage")) * 100;
+            this.DAMAGE = (int) (Float.parseFloat(props.getProperty("gameObjects.enemyCar.damage")) * 100);
         }else if(type.equals(GameObjectType.OTHER_CAR.name())){
-            this.IMAGE = new Image(props.getProperty("gameObjects.otherCar.image"));
-            this.DAMAGE = (int) Float.parseFloat(props.getProperty("gameObjects.otherCar.damage")) * 100;
+            String tempString = props.getProperty("gameObjects.otherCar.image");
+            this.IMAGE = new Image(String.format(tempString, MiscUtils.selectAValue(1, 2)));
+            this.DAMAGE = (int) (Float.parseFloat(props.getProperty("gameObjects.otherCar.damage")) * 100);
         }else{
             this.IMAGE = null;
             this.DAMAGE = 0;
@@ -157,6 +160,9 @@ public abstract class Car implements Collidable{
 
         this.adjustToInputMovement(input);
         updateCollision(input);
+        if(health <= 0 && fire == null){
+            fire = new Fire(this.x, this.y, PROPS);
+        }
     }
 
 
@@ -167,11 +173,13 @@ public abstract class Car implements Collidable{
     public void hasCollided(int diffY, int damage){
         this.isCollided = true;
         collisionTime = POST_COLLISION_TIME;
+        this.smoke = new Smoke(this.x, this.y, PROPS);
         this.speedY = 0;
         if(diffY > 0)
             this.timeOutY = 1;
         else
             this.timeOutY = -1;
+        this.health -= damage;
         if(damage != 0)
             this.timeOut = MAX_TIME_OUT;
     }
@@ -189,6 +197,8 @@ public abstract class Car implements Collidable{
                 damageD = d.getDamage();
                 damageT = t.getDamage();
             }
+            System.out.println(d.getDamage());
+            System.out.println(t.getDamage());
             if(t.getTimeout() == -1 && d.getTimeout() == -1) {
                 t.hasCollided(t.getY() - d.getY(), damageD);
                 d.hasCollided(d.getY() - t.getY(), damageT);
@@ -220,6 +230,10 @@ public abstract class Car implements Collidable{
         Font trial = new Font("res/FSO8BITR.TTF", 20);
         trial.drawString(String.format("time: %d, HP: %d, ctime: %d", timeOut,health, collisionTime), x-30, y);
 
+        if(this.smoke != null)
+            this.smoke.update(this.x, this.y, input);
+        if(this.fire != null)
+            this.fire.update(this.x, this.y, input);
         collisionTime --;
     }
 

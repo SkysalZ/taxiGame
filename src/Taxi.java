@@ -175,4 +175,5 @@ public class Taxi extends Car implements Generatable<Taxi>{
         return new Taxi(-1,-1,null, -1, props);
     }
 
+
 }

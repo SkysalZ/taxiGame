@@ -25,6 +25,7 @@ public class GamePlayScreen{
     private Background background1;
     private Background background2;
     private ArrayList<EnemyCar> enemyCars;
+    private ArrayList<OtherCar> otherCars;
 
     private final float TARGET;
     private final int MAX_FRAMES;
@@ -58,6 +59,7 @@ public class GamePlayScreen{
         ArrayList<String[]> weatherLines = IOUtils.readCommaSeperatedFile("res/gameWeather.csv");
         weathers = new ArrayList<>();
         enemyCars = new ArrayList<>();
+        otherCars = new ArrayList<>();
         populateWeather(weatherLines);
         ArrayList<String[]> objectLines = IOUtils.readCommaSeperatedFile(gameProps.getProperty("gamePlay.objectsFile"));
         populateGameObjects(objectLines);
@@ -165,12 +167,19 @@ public class GamePlayScreen{
         background2.update(input, background1, weathers, currFrame);
 
         EnemyCar tempEnemyCar = new EnemyCar(-1, -1, GAME_PROPS);
+        OtherCar tempOtherCar = new OtherCar(-1, -1, GAME_PROPS);
 
         tempEnemyCar = Car.checkAndGenerate(tempEnemyCar, GAME_PROPS);
+        tempOtherCar = Car.checkAndGenerate(tempOtherCar, GAME_PROPS);
 
         if(tempEnemyCar != null) {
             enemyCars.add(tempEnemyCar);
         }
+
+        if(tempOtherCar != null) {
+            otherCars.add(tempOtherCar);
+        }
+
 
         for(Passenger passenger: passengers) {
             passenger.updateWithTaxi(input, taxi);
@@ -180,6 +189,14 @@ public class GamePlayScreen{
                 EnemyCar thisEnemyCar = enemyCars.get(i);
                 thisEnemyCar.updateCollision(enemyCars, taxi);
                 thisEnemyCar.update(input);
+            }
+        }
+
+        if (otherCars != null) {
+            for (int i = 0; i < otherCars.size(); i++) {
+                OtherCar thisOtherCar = otherCars.get(i);
+                thisOtherCar.updateCollision(otherCars,  taxi);
+                thisOtherCar.update(input);
             }
         }
 
