@@ -42,9 +42,19 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
     /**
      * check Collision with other objects
      */
-    public void updateCollision(ArrayList<EnemyCar> enemyCars, Taxi taxi) {
+    public void updateCollision(ArrayList<EnemyCar> enemyCars, ArrayList<OtherCar> otherCars,
+                                ArrayList<FireBall> fireBalls, Taxi taxi, Driver driver) {
         for(EnemyCar enemyCar : enemyCars){
             checkCollision(this, enemyCar);
+        }
+        for(OtherCar otherCar : otherCars){
+            checkCollision(this, otherCar);
+        }
+        for(FireBall fireBall : fireBalls){
+            checkCollision(this, fireBall);
+        }
+        if(!taxi.getIsActive()) {
+            checkCollision(this, driver);
         }
         checkCollision(this, taxi);
     }

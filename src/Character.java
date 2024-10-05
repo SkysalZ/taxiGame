@@ -1,12 +1,15 @@
+import bagel.Font;
 import bagel.Image;
 import bagel.Input;
 import bagel.Keys;
 
 import java.util.Properties;
 
-public abstract class Character {
+public abstract class Character implements Collidable{
     private final int TAXI_DETECT_RADIUS;
     private final Properties PROPS;
+    private final static int POST_COLLISION_TIME = 10;
+    private final static int DRIVER_EJECTION_OFFSET = 50;
 
     private final int WALK_SPEED_X;
     private final int WALK_SPEED_Y;
@@ -14,19 +17,24 @@ public abstract class Character {
     private int walkDirectionY;
     private boolean isGetInTaxi;
     private boolean isEjected;
+    private boolean invincible;
+    private int collisionTime;
 
     private final Image IMAGE;
+    private Blood BLOOD;
     private final int SPEED_Y;
 
     private int x;
     private int y;
     private int moveY;
+    private int timeOutY;
 
     private boolean reachedTaxi;
     private int timeOut;
     private static final int MAX_TIME_OUT = 200;
     private int health;
     private boolean isDead;
+    private final float RADIUS;
 
     public Character(int x, int y, String type, Properties props) {
         this.WALK_SPEED_X = Integer.parseInt(props.getProperty("gameObjects.passenger.walkSpeedX"));
@@ -39,27 +47,32 @@ public abstract class Character {
         this.y = y;
         this.moveY = 0;
         this.SPEED_Y = Integer.parseInt(props.getProperty("gameObjects.taxi.speedY"));
+        this.health = (int) (Float.parseFloat(props.getProperty("gameObjects.driver.health")) * 100);
         if(type.equals(GameObjectType.PASSENGER.name())){
             IMAGE = new Image(props.getProperty("gameObjects.passenger.image"));
+            RADIUS = Float.parseFloat(props.getProperty("gameObjects.passenger.radius"));
         }else if(type.equals(GameObjectType.DRIVER.name())){
             IMAGE = new Image(props.getProperty("gameObjects.driver.image"));
             this.isGetInTaxi = true;
+            RADIUS = Float.parseFloat(props.getProperty("gameObjects.driver.radius"));
         }else{
             this.isGetInTaxi = false;
             IMAGE = null;
+            RADIUS = 0;
         }
         this.isEjected = false;
 
 
     }
+    public Properties getProps() { return PROPS; }
     public int getX() {
         return x;
     }
-
     public int getY() {
         return y;
     }
-
+    public boolean getInvincible() { return invincible; }
+    public void setX(int x) { this.x = x; }
     public void setY(int y) {
         this.y = y;
     }
@@ -99,6 +112,15 @@ public abstract class Character {
     public int getMaxTimeOut(){
         return MAX_TIME_OUT;
     }
+    public int getPostCollisionTime(){
+        return POST_COLLISION_TIME;
+    }
+    public int getCollisionTime(){ return collisionTime; }
+    public int getTaxiDetectRadius(){ return TAXI_DETECT_RADIUS; }
+    @Override
+    public int getTimeout(){
+        return timeOut;
+    }
     public void setMoveY(int newMoveY){
         moveY = newMoveY;
     }
@@ -108,12 +130,20 @@ public abstract class Character {
     public void setWalkDirectionY(int newWalkDirectionY){
         walkDirectionY = newWalkDirectionY;
     }
+    public boolean getIsDead(){ return BLOOD != null && BLOOD.finished(); }
+    public Blood getBlood() { return BLOOD; }
+    public void setBlood(int x, int y, Properties props){
+        this.BLOOD = new Blood(x, y, props);
+    }
 
-    public abstract void updateWithTaxi(Input input, Taxi taxi);
     protected void adjustToInputMovement(Input input) {
-        if (input.wasPressed(Keys.UP)) {
-            moveY = 1;
-        }  else if(input.wasReleased(Keys.UP)) {
+        if(input != null) {
+            if (input.isDown(Keys.UP)) {
+                moveY = 1;
+            }else {
+                moveY = 0;
+            }
+        }else{
             moveY = 0;
         }
     }
@@ -142,22 +172,6 @@ public abstract class Character {
         y = taxi.getY();
     }
 
-    /**
-     * Check if the taxi is adjacent to the passenger. This is evaluated based on multiple crietria.
-     * @param taxi The active taxi in the game play.
-     * @return a boolean value indicating if the taxi is adjacent to the passenger.
-     */
-    protected boolean adjacentToObject(Taxi taxi) {
-        // Check if Taxi is stopped and health > 0
-        // Check if Taxi is in the passenger's detect radius
-        boolean taxiStopped = !taxi.getIsMovingX() && !taxi.isMovingY();
-        // Check if Taxi is in the passenger's detect radius
-        float currDistance = (float) Math.sqrt(Math.pow(taxi.getX() - x, 2) + Math.pow(taxi.getY() - y, 2));
-        // Check if Taxi is not having another trip
-        boolean isHavingAnotherTrip = taxi.getTrip() != null && taxi.getTrip().getPassenger() != this;
-
-        return currDistance <= TAXI_DETECT_RADIUS && taxiStopped && !isHavingAnotherTrip;
-    }
 
     /**
      * Set the get in taxi status of the people object.
@@ -168,8 +182,88 @@ public abstract class Character {
     public void setIsGetInTaxi(Taxi taxi) {
         if(taxi == null) {
             isGetInTaxi = false;
-        } else if((float) Math.sqrt(Math.pow(taxi.getX() - x, 2) + Math.pow(taxi.getY() - y, 2)) <= 1) {
+        } else if(taxi.getX() == x && taxi.getY() == y && this  instanceof  Passenger) {
+            isGetInTaxi = true;
+        }else if(this instanceof  Driver) {
             isGetInTaxi = true;
         }
     }
+
+    /**
+     * implements collision behaviour for collision with objects other than fireball
+     */
+    @Override
+    public void hasCollided(int diffY, int damage){
+        if(damage != 0)
+            this.timeOut = MAX_TIME_OUT;
+        collisionTime = POST_COLLISION_TIME;
+        if(diffY > 0)
+            this.timeOutY = 1;
+        else
+            this.timeOutY = -1;
+        this.health -= damage;
+    }
+
+    /**
+     * implements post collision behaviour
+     */
+    protected void postCollisionMovement(){
+        y += timeOutY;
+    }
+
+    /**
+     * updates Collision behaviour
+     */
+    protected void updateCollision(Input input){
+        if(this.collisionTime > 0){
+            postCollisionMovement();
+        }else{
+            timeOutY = 0;
+        }
+        if(this.timeOut > 0){
+            this.invincible = true;
+            this.timeOut --;
+        }else if(timeOut == 0){
+            invincible = false;
+            this.timeOut --;
+        }
+
+        Font trial = new Font("res/FSO8BITR.TTF", 20);
+        trial.drawString(String.format("time: %d, HP: %d, ctime: %d", timeOut,health, collisionTime), x-30, y);
+
+        if(this.BLOOD != null)
+            this.BLOOD.update(this.x, this.y, input);
+        collisionTime --;
+    }
+
+    /**
+     * implements collision behaviour for collision with fireball
+     */
+    @Override
+    public void hasCollided(int damage){
+        this.timeOut = MAX_TIME_OUT;
+        this.timeOutY = 0;
+        this.health -= damage;
+    }
+
+    @Override
+    public int getDamage(){
+        return 0;
+    }
+
+    @Override
+    public float getRadius(){
+        return this.RADIUS;
+    }
+
+    public void ejection(Taxi taxi){
+        if(this.getIsGetInTaxi()) {
+            x = taxi.getX() - DRIVER_EJECTION_OFFSET;
+
+            y = taxi.getY();
+        }
+        setIsGetInTaxi(null);
+    }
+
+
 }

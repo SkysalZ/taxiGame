@@ -41,10 +41,16 @@ public class OtherCar extends Car implements Generatable<OtherCar>{
     /**
      * check Collision with other objects
      */
-    public void updateCollision(ArrayList<OtherCar> otherCars, Taxi taxi) {
+    public void updateCollision(ArrayList<OtherCar> otherCars, ArrayList<FireBall> fireBalls,
+                                Taxi taxi, Driver driver) {
         for(OtherCar otherCar : otherCars){
             checkCollision(this, otherCar);
         }
+        for(FireBall fireBall : fireBalls){
+            checkCollision(this, fireBall);
+        }
+        if(!taxi.getIsActive())
+            checkCollision(this, driver);
         checkCollision(this, taxi);
     }
 

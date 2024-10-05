@@ -36,7 +36,6 @@ public class Passenger extends Character{
      * @param input The current mouse/keyboard input.
      * @param taxi The active taxi in the game play.
      */
-    @Override
     public void updateWithTaxi(Input input, Taxi taxi) {
         // if the passenger is not in the taxi or the trip is completed, update the passenger status based on keyboard
         // input. This means the passenger is go down when taxi moves up.
@@ -102,15 +101,15 @@ public class Passenger extends Character{
         if (super.getIsGetInTaxi()) {
             // if the passenger is in the taxi, move the passenger along with the taxi.
             moveWithTaxi(taxi);
-        } else if(!super.getIsGetInTaxi() && trip != null && trip.isComplete()) {
+        } else if(!super.getIsGetInTaxi() && trip != null && trip.isComplete() && super.getBlood() == null) {
             //walk towards end flag if the trip is completed and not in the taxi.
-            if(!hasReachedFlag()) {
+            if(!hasReachedFlag(taxi.getIsActive()) && getCollisionTime() <= getPostCollisionTime()) {
                 TripEndFlag tef = trip.getTripEndFlag();
                 walkXDirectionObj(tef.getX());
                 walkYDirectionObj(tef.getY());
                 walk();
             }
-        } else {
+        } else if(super.getBlood() == null){
             // Walk towards the taxi if other conditions are not met.
             // (That is when taxi is stopped with not having a trip and adjacent to the passenger and the passenger
             // hasn't initiated the trip yet.)
@@ -152,15 +151,33 @@ public class Passenger extends Character{
      * Check if the passenger has reached the end flag of the trip.
      * @return a boolean value indicating if the passenger has reached the end flag.
      */
-    public boolean hasReachedFlag() {
+    public boolean hasReachedFlag(boolean isActive) {
         if(trip != null) {
             TripEndFlag tef = trip.getTripEndFlag();
-            if(tef.getX() == super.getX() && tef.getY() == super.getY()) {
+            if(tef.getX() == super.getX() && tef.getY() == super.getY() && isActive) {
                 reachedFlag = true;
             }
             return reachedFlag;
         }
         return false;
+    }
+
+    /**
+     * Check if the taxi is adjacent to the passenger. This is evaluated based on multiple crietria.
+     * @param taxi The active taxi in the game play.
+     * @return a boolean value indicating if the taxi is adjacent to the passenger.
+     */
+    private boolean adjacentToObject(Taxi taxi) {
+        // Check if Taxi is stopped and health > 0
+        // Check if Taxi is in the passenger's detect radius
+        boolean taxiStopped = !taxi.getIsMovingX() && !taxi.getIsMovingY();
+        // Check if Taxi is in the passenger's detect radius
+        float currDistance = (float) Math.sqrt(Math.pow(taxi.getX() - super.getX(), 2) +
+                Math.pow(taxi.getY() - super.getY(), 2));
+        // Check if Taxi is not having another trip
+        boolean isHavingAnotherTrip = taxi.getTrip() != null && taxi.getTrip().getPassenger() != this;
+
+        return currDistance <= super.getTaxiDetectRadius() && taxiStopped && !isHavingAnotherTrip;
     }
 
 

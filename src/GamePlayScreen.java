@@ -19,6 +19,7 @@ public class GamePlayScreen{
 
     // game objects
     private Taxi taxi;
+    private Driver driver;
     private Passenger[] passengers;
     private Coin[] coins;
     private ArrayList<Weather> weathers;
@@ -26,6 +27,7 @@ public class GamePlayScreen{
     private Background background2;
     private ArrayList<EnemyCar> enemyCars;
     private ArrayList<OtherCar> otherCars;
+    private ArrayList<FireBall> fireBalls;
 
     private final float TARGET;
     private final int MAX_FRAMES;
@@ -60,6 +62,7 @@ public class GamePlayScreen{
         weathers = new ArrayList<>();
         enemyCars = new ArrayList<>();
         otherCars = new ArrayList<>();
+        fireBalls = new ArrayList<>();
         populateWeather(weatherLines);
         ArrayList<String[]> objectLines = IOUtils.readCommaSeperatedFile(gameProps.getProperty("gamePlay.objectsFile"));
         populateGameObjects(objectLines);
@@ -133,6 +136,7 @@ public class GamePlayScreen{
             if(lineElement[0].equals(GameObjectType.TAXI.name())) {
                 taxi = new Taxi(x, y, GameObjectType.TAXI.name(), passengerCount, this.GAME_PROPS);
                 taxi.setIsActive();
+                driver = new Driver(x, y, GAME_PROPS);
             } else if(lineElement[0].equals(GameObjectType.PASSENGER.name())) {
                 int priority = Integer.parseInt(lineElement[3]);
                 int travelEndX = Integer.parseInt(lineElement[4]);
@@ -162,6 +166,11 @@ public class GamePlayScreen{
     public boolean update(Input input) {
         currFrame++;
 
+        if(taxi.getIsActive() && taxi.checkPostCollision())
+            input = null;
+        else if(!taxi.getIsActive() && driver.checkPostCollision())
+            input = null;
+
         background1.update(input, background2, weathers, currFrame);
         background2.updateWeather(background1.getImage());
         background2.update(input, background1, weathers, currFrame);
@@ -184,10 +193,20 @@ public class GamePlayScreen{
         for(Passenger passenger: passengers) {
             passenger.updateWithTaxi(input, taxi);
         }
+        if(!fireBalls.isEmpty()) {
+            for(int i = 0; i < fireBalls.size(); i++) {
+                if(fireBalls.get(i).getIsCollided()) {
+                    fireBalls.remove(i);
+                    continue;
+                }
+                fireBalls.get(i).update(input);
+                fireBalls.get(i).updateCollision(taxi);
+            }
+        }
         if (enemyCars != null) {
             for (int i = 0; i < enemyCars.size(); i++) {
                 EnemyCar thisEnemyCar = enemyCars.get(i);
-                thisEnemyCar.updateCollision(enemyCars, taxi);
+                thisEnemyCar.updateCollision(enemyCars, otherCars, fireBalls, taxi, driver);
                 thisEnemyCar.update(input);
             }
         }
@@ -195,7 +214,7 @@ public class GamePlayScreen{
         if (otherCars != null) {
             for (int i = 0; i < otherCars.size(); i++) {
                 OtherCar thisOtherCar = otherCars.get(i);
-                thisOtherCar.updateCollision(otherCars,  taxi);
+                thisOtherCar.updateCollision(otherCars, fireBalls, taxi, driver);
                 thisOtherCar.update(input);
             }
         }
@@ -203,6 +222,10 @@ public class GamePlayScreen{
         taxi.update(input);
         totalEarnings = taxi.calculateTotalEarnings();
 
+        if(taxi.getHealth() <= 0 && taxi.getCollisionTime() < 0) {
+            taxi.newTaxi(driver);
+        }
+        driver.updateWithTaxi(input, taxi);
         if(coins.length > 0) {
             int minFramesActive = coins[0].getMaxFrames();
             for(Coin coinPower: coins) {

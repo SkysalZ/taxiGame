@@ -5,7 +5,7 @@ import bagel.Keys;
 
 import java.util.Properties;
 
-public abstract class Car implements Collidable{
+public abstract class Car implements  Collidable{
     private final Image IMAGE;
     private final int SPEED_X;
     private final float RADIUS;
@@ -27,6 +27,7 @@ public abstract class Car implements Collidable{
     private Smoke smoke;
     private Fire fire;
 
+
     private int x;
     private int y;
 
@@ -38,14 +39,14 @@ public abstract class Car implements Collidable{
 
         this.SPEED_X = Integer.parseInt(props.getProperty("gameObjects.taxi.speedX"));
         this.RADIUS = Float.parseFloat(props.getProperty("gameObjects.taxi.radius"));
-        this.health = (int) Float.parseFloat(props.getProperty("gameObjects.taxi.health")) * 100;
+        this.health = (int) (Float.parseFloat(props.getProperty("gameObjects.taxi.health")) * 100);
         this.PROPS = props;
         this.SCROLL_SPEED = Integer.parseInt(props.getProperty("gameObjects.taxi.speedY"));
 
         //check what type of car it is to correctly assign the image
         if(type.equals(GameObjectType.TAXI.name())){
             this.IMAGE = new Image(props.getProperty("gameObjects.taxi.image"));
-            this.DAMAGE = (int) Float.parseFloat(props.getProperty("gameObjects.taxi.damage")) * 100;
+            this.DAMAGE = (int) (Float.parseFloat(props.getProperty("gameObjects.taxi.damage")) * 100);
         }else if(type.equals(GameObjectType.ENEMY_CAR.name())){
             this.IMAGE = new Image(props.getProperty("gameObjects.enemyCar.image"));
             this.DAMAGE = (int) (Float.parseFloat(props.getProperty("gameObjects.enemyCar.damage")) * 100);
@@ -53,6 +54,9 @@ public abstract class Car implements Collidable{
             String tempString = props.getProperty("gameObjects.otherCar.image");
             this.IMAGE = new Image(String.format(tempString, MiscUtils.selectAValue(1, 2)));
             this.DAMAGE = (int) (Float.parseFloat(props.getProperty("gameObjects.otherCar.damage")) * 100);
+        }else if(type.equals(GameObjectType.BROKEN_TAXI.name())){
+            this.IMAGE = new Image(props.getProperty("gameObjects.taxi.damagedImage"));
+            this.DAMAGE = 0;
         }else{
             this.IMAGE = null;
             this.DAMAGE = 0;
@@ -80,12 +84,16 @@ public abstract class Car implements Collidable{
     public int getHealth() {
         return this.health;
     }
+    public void setSpeedY(int speedY) {
+        this.speedY = speedY;
+    }
     protected void setX(int x) { this.x = x; }
     protected void setY(int y) { this.y = y; }
-
-
-
+    public boolean getIsBroken(){ return isBroken; }
     public int getDamage(){ return DAMAGE; }
+    public void resetHealth() {
+        this.health = (int) (Float.parseFloat(PROPS.getProperty("gameObjects.taxi.health")) * 100);
+    }
     public void setTimeOutY(int timeOutY) { this.timeOutY = timeOutY; }
     public void setTimeOut(int timeOut) { this.timeOut = timeOut; }
     public void setInvincible(boolean invincible) {
@@ -94,6 +102,23 @@ public abstract class Car implements Collidable{
     public boolean getInvincible() {
         return invincible;
     }
+    public int getMaxTimeOut(){
+        return MAX_TIME_OUT;
+    }
+    public int getPostCollisionTime(){
+        return POST_COLLISION_TIME;
+    }
+    public int getCollisionTime(){ return collisionTime; }
+    public boolean Broke(){
+        if(fire == null){
+            return false;
+        }else{
+            return fire.finished();
+        }
+    }
+
+
+
 
     /**
      * Adjust the movement of the car based on the keyboard input.
@@ -183,6 +208,21 @@ public abstract class Car implements Collidable{
         if(damage != 0)
             this.timeOut = MAX_TIME_OUT;
     }
+    /**
+     * implements collision behaviour for collision with fireball
+     */
+    @Override
+    public void hasCollided(int diffY){
+        this.isCollided = true;
+        collisionTime = POST_COLLISION_TIME;
+        this.smoke = new Smoke(this.x, this.y, PROPS);
+        this.speedY = 0;
+        if(diffY > 0)
+            this.timeOutY = 1;
+        else
+            this.timeOutY = -1;
+        this.timeOut = MAX_TIME_OUT;
+    }
 
     /**
      * checks if a collision is present with non-people
@@ -197,8 +237,6 @@ public abstract class Car implements Collidable{
                 damageD = d.getDamage();
                 damageT = t.getDamage();
             }
-            System.out.println(d.getDamage());
-            System.out.println(t.getDamage());
             if(t.getTimeout() == -1 && d.getTimeout() == -1) {
                 t.hasCollided(t.getY() - d.getY(), damageD);
                 d.hasCollided(d.getY() - t.getY(), damageT);
@@ -207,6 +245,58 @@ public abstract class Car implements Collidable{
     }
 
 
+
+
+    /**
+     * checks if a collision is present with fireballs
+     */
+    protected <T extends Collidable> void checkCollision(T t, FireBall fireBall) {
+        float currDistance = (float) Math.sqrt(Math.pow(t.getX() - fireBall.getX(), 2) +
+                Math.pow(t.getY() - fireBall.getY(), 2));
+        if (currDistance < t.getRadius() + fireBall.getRadius() && t.getTimeout() == -1 && !fireBall.getIsCollided() &&
+                (! (t instanceof EnemyCar) || t.getY() < fireBall.getY())) {
+            t.hasCollided(0, fireBall.getDamage());
+            fireBall.hasCollided();
+        }
+
+    }
+
+
+
+    /**
+     * checks if a collision is present with driver
+     */
+    protected <T extends Collidable, D extends Character> void checkCollision(T t, D d) {
+        float currDistance = (float) Math.sqrt(Math.pow(t.getX() - d.getX(), 2) +
+                Math.pow(t.getY() - d.getY(), 2));
+        if (currDistance < t.getRadius() + d.getRadius()) {
+            int damageT = 0;
+            if(!d.getInvincible() && !t.getInvincible()){
+                damageT = t.getDamage();
+            }
+            if(t.getTimeout() == -1 && d.getTimeout() == -1) {
+                t.hasCollided(t.getY() - d.getY());
+                d.hasCollided(d.getY() - t.getY(), damageT);
+            }
+        }
+    }
+
+
+
+
+    /**
+     * implements post collision behaviour
+     */
+    protected void postCollisionMovement(){
+        y += timeOutY;
+    }
+
+    /**
+     * implements timeout behaviour
+     */
+    protected void checkInvincibility(){
+        setInvincible(timeOut > 0);
+    }
 
     /**
      * updates Collision behaviour
@@ -237,21 +327,10 @@ public abstract class Car implements Collidable{
         collisionTime --;
     }
 
-
-
-
-
-    /**
-     * implements post collision behaviour
-     */
-    protected void postCollisionMovement(){
-        y += timeOutY;
+    public boolean checkPostCollision(){
+        return collisionTime > 0;
     }
 
-    /**
-     * implements timeout behaviour
-     */
-    protected void checkInvincibility(){
-        setInvincible(timeOut > 0);
-    }
+
+
 }

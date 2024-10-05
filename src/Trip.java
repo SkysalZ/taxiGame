@@ -54,16 +54,17 @@ public class Trip {
      * Check if the trip has reached the end point based on several criteria.
      * @return true if the trip has reached the end point, false otherwise.
      */
-    public boolean hasReachedEnd() {
+    public boolean hasReachedEnd(boolean isActive) {
         // Taxi is stopped when it is not moving in any direction and has health > 0.
-        boolean isTaxiStopped = !TAXI.getIsMovingX();
+        boolean isTaxiStopped = !TAXI.getIsMovingX() && !TAXI.getIsMovingY();
         float currDistance = getCurrentDistance();
         boolean passedDropOff = hasPassedDropOff();
 
         // The trip is considered as reached end if the taxi is stopped and the distance between the passenger
         // and the drop-off point is less than the radius of the drop-off point.
         // Or if the passenger has passed the drop-off point and the taxi is stopped.
-        return (currDistance <= TRIP_END_FLAG.getRadius() && isTaxiStopped) || (passedDropOff && isTaxiStopped);
+        return (currDistance <= TRIP_END_FLAG.getRadius() && isTaxiStopped && isActive) ||
+                (passedDropOff && isTaxiStopped && isActive);
     }
 
     /**

@@ -1,3 +1,4 @@
+import bagel.Font;
 import bagel.Image;
 import bagel.Input;
 import bagel.Keys;
@@ -8,6 +9,8 @@ import java.util.Properties;
  * The class representing the taxis in the game play
  */
 public class Taxi extends Car implements Generatable<Taxi>{
+    private final static int MIN_Y = 200;
+    private final static int MAX_Y = 400;
 
     private final Trip[] TRIPS;
     private int tripCount;
@@ -17,10 +20,16 @@ public class Taxi extends Car implements Generatable<Taxi>{
     private Coin coinPower;
     private Trip trip;
     private boolean isActive;
+    private boolean isBroken;
 
     public Taxi(int x, int y, String type, int maxTripCount, Properties props) {
         super(x, y, GameObjectType.TAXI.name(), props);
         TRIPS = new Trip[maxTripCount];
+        super.setSpeedY(0);
+    }
+    public Taxi(int x, int y, Properties props) {
+        super(x, y, GameObjectType.BROKEN_TAXI.name(), props);
+        TRIPS = new Trip[0];
     }
 
 
@@ -36,13 +45,9 @@ public class Taxi extends Car implements Generatable<Taxi>{
             tripCount++;
         }
     }
-
-    public boolean isMovingY() {
-        return isMovingY;
-    }
-    public boolean getIsMovingX() {
-        return isMovingX;
-    }
+    public boolean getIsMovingY() {return isMovingY && isActive;}
+    public boolean getIsMovingX() {return isMovingX && isActive;}
+    public Coin getCoinPower() {return coinPower;}
 
     public Trip getTrip() {
         return this.trip;
@@ -85,6 +90,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
     public void update(Input input) {
         // if the taxi has coin power, apply the effect of the coin on the priority of the passenger
         // (See the logic in TravelPlan class)
+        System.out.println(isActive);
         if (trip != null && coinPower != null) {
             TravelPlan tp = trip.getPassenger().getTravelPlan();
             int newPriority = tp.getPriority();
@@ -101,6 +107,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
             setMovingXY(input);
             adjustToInputMovement(input);
         }else if(input != null){
+            System.out.println("ran");
             super.adjustToInputMovement(input);
             move();
         }
@@ -108,7 +115,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
 
         super.checkInvincibility();
 
-        if(trip != null && trip.hasReachedEnd()) {
+        if(trip != null && trip.hasReachedEnd(isActive)) {
             getTrip().end();
         }
 
@@ -117,7 +124,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
         // the flag of the current trip renders to the screen
         if(tripCount > 0) {
             Trip lastTrip = TRIPS[tripCount - 1];
-            if(!lastTrip.getPassenger().hasReachedFlag()) {
+            if(!lastTrip.getPassenger().hasReachedFlag(this.isActive)) {
                 lastTrip.getTripEndFlag().update(input);
             }
         }
@@ -147,6 +154,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
             }
         }
     }
+
     public void collectPower(Coin coin) {
         coinPower = coin;
     }
@@ -174,6 +182,37 @@ public class Taxi extends Car implements Generatable<Taxi>{
     public Taxi toGenerate(Properties props){
         return new Taxi(-1,-1,null, -1, props);
     }
+
+
+    /**
+     * Calculate total earnings. (See how fee is calculated for each trip in Trip class.)
+     * @return int, total earnings
+     */
+    public void newTaxi(Driver driver){
+        driver.ejection(this);
+        this.resetHealth();
+        super.setX(MiscUtils.selectAValue(Integer.parseInt(super.getProps().getProperty("roadLaneCenter1")),
+                Integer.parseInt(super.getProps().getProperty("roadLaneCenter3"))));
+        super.setY(MiscUtils.getRandomInt(MIN_Y, MAX_Y));
+        int tempX = MiscUtils.selectAValue(Integer.parseInt(super.getProps().getProperty("roadLaneCenter1")),
+                Integer.parseInt(super.getProps().getProperty("roadLaneCenter3")));
+        int tempY = MiscUtils.getRandomInt(MIN_Y, MAX_Y);
+        this.isActive = false;
+        super.setX(tempX);
+        super.setY(tempY);
+        super.setTimeOut(-1);
+        this.coinPower = null;
+    }
+
+    public void activate(){
+        isActive = true;
+    }
+
+    @Override
+    public void hasCollided(int diffY, int damage){
+        super.hasCollided(diffY, damage);
+    }
+
 
 
 }
