@@ -27,7 +27,6 @@ public class Background {
         this.WINDOW_HEIGHT = Integer.parseInt(props.getProperty("window.height"));
         this.PROPS = props;
         if(isSunny) {
-            System.out.println(props.getProperty("backgroundImage.sunny"));
             image = new Image(props.getProperty("backgroundImage.sunny"));
         }else{
             image = new Image(props.getProperty("backgroundImage.raining"));
@@ -41,7 +40,6 @@ public class Background {
     public void update(Input input, Background background, ArrayList<Weather> weathers, int frameNumber) {
         int weatherIndex = 0;
         if (Weather.weatherChanged(weathers, frameNumber)){
-            System.out.println("not yet");
             if(weathers.get(Weather.getWeatherIndex()).isSunny()){
                 image = new Image(PROPS.getProperty("backgroundImage.sunny"));
             }else{
@@ -51,10 +49,10 @@ public class Background {
 
         if(input != null) {
             adjustToInputMovement(input);
+            move();
         }
-
-        move();
         draw();
+
 
         if (y >= WINDOW_HEIGHT * 1.5) {
             y = background.getY() - WINDOW_HEIGHT;
@@ -86,14 +84,22 @@ public class Background {
      * @param input The current mouse/keyboard input.
      */
     public void adjustToInputMovement(Input input) {
-        if (input.wasPressed(Keys.UP)) {
-            moveY = 1;
-        }  else if(input.wasReleased(Keys.UP)) {
+        if(input != null) {
+            if (input.isDown(Keys.UP)) {
+                moveY = 1;
+            }else {
+                moveY = 0;
+            }
+        }else  {
             moveY = 0;
         }
     }
     //make sure two backgrounds are the same
     public void updateWeather(Image newImage){
         this.image = newImage;
+    }
+
+    public int getMoveY() {
+        return moveY;
     }
 }

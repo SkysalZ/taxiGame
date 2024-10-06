@@ -50,6 +50,7 @@ public class Trip {
         return penalty;
     }
 
+
     /**
      * Check if the trip has reached the end point based on several criteria.
      * @return true if the trip has reached the end point, false otherwise.

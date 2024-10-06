@@ -49,7 +49,14 @@ public class FireBall extends Object{
     /**
      * check Collision with other objects
      */
-    public void updateCollision(Taxi taxi) {
+    public void updateCollision(Passenger[] passengers, Taxi taxi, Driver driver) {
+        for(Passenger passenger : passengers){
+            if(!taxi.getIsActive() || !passenger.getIsGetInTaxi())
+                checkCollision(this, passenger);
+        }
+        if(!taxi.getIsActive()) {
+            checkCollision(this, driver);
+        }
         checkCollision(this, taxi);
     }
 

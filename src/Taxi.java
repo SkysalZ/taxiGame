@@ -18,6 +18,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
     private boolean isMovingX;
 
     private Coin coinPower;
+    private Star starPower;
     private Trip trip;
     private boolean isActive;
     private boolean isBroken;
@@ -48,6 +49,11 @@ public class Taxi extends Car implements Generatable<Taxi>{
     public boolean getIsMovingY() {return isMovingY && isActive;}
     public boolean getIsMovingX() {return isMovingX && isActive;}
     public Coin getCoinPower() {return coinPower;}
+    public boolean checkStarPower() {
+        if(starPower == null)
+            return false;
+        return starPower.applyEffect();
+    }
 
     public Trip getTrip() {
         return this.trip;
@@ -87,10 +93,9 @@ public class Taxi extends Car implements Generatable<Taxi>{
      * Render the game object into the screen.
      * @param input The current mouse/keyboard input.
      */
-    public void update(Input input) {
+    public void update(Input input, boolean isSunny) {
         // if the taxi has coin power, apply the effect of the coin on the priority of the passenger
         // (See the logic in TravelPlan class)
-        System.out.println(isActive);
         if (trip != null && coinPower != null) {
             TravelPlan tp = trip.getPassenger().getTravelPlan();
             int newPriority = tp.getPriority();
@@ -107,13 +112,15 @@ public class Taxi extends Car implements Generatable<Taxi>{
             setMovingXY(input);
             adjustToInputMovement(input);
         }else if(input != null){
-            System.out.println("ran");
             super.adjustToInputMovement(input);
             move();
         }
         setTimeOutY(-1);
 
         super.checkInvincibility();
+        if(starPower != null) {
+            super.setInvincible(getInvincible());
+        }
 
         if(trip != null && trip.hasReachedEnd(isActive)) {
             getTrip().end();
@@ -132,6 +139,11 @@ public class Taxi extends Car implements Generatable<Taxi>{
 
     }
 
+    public void updateBrokenTaxi(Input input) {
+        super.adjustToInputMovement(input);
+        super.move();
+        draw();
+    }
 
 
     /**
@@ -155,8 +167,11 @@ public class Taxi extends Car implements Generatable<Taxi>{
         }
     }
 
-    public void collectPower(Coin coin) {
-        coinPower = coin;
+    public <T extends Power> void collectPower(T t) {
+        if(t instanceof Coin)
+            coinPower = (Coin) t;
+        else
+            starPower = (Star) t;
     }
 
     /**
@@ -202,6 +217,7 @@ public class Taxi extends Car implements Generatable<Taxi>{
         super.setY(tempY);
         super.setTimeOut(-1);
         this.coinPower = null;
+        this.starPower = null;
     }
 
     public void activate(){
@@ -210,6 +226,8 @@ public class Taxi extends Car implements Generatable<Taxi>{
 
     @Override
     public void hasCollided(int diffY, int damage){
+        if(this.checkStarPower())
+            damage = 0;
         super.hasCollided(diffY, damage);
     }
 

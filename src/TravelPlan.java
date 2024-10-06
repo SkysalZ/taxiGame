@@ -6,6 +6,7 @@ import java.util.Properties;
  */
 public class TravelPlan {
 
+    private final static int NO_UMBRELLA_PRIORITY = 1;
     private final int END_X;
     private final int DISTANCE_Y;
     private final Properties PROPS;
@@ -29,6 +30,13 @@ public class TravelPlan {
 
     public int getPriority() {
         return currentPriority;
+    }
+    // This overload method is for when a passenger is not picked up
+    public int getPriority(boolean isUrgent) {
+        if(isUrgent)
+            return NO_UMBRELLA_PRIORITY;
+        else
+            return currentPriority;
     }
 
     public int getInitPriority(){
@@ -70,8 +78,23 @@ public class TravelPlan {
     public float getExpectedFee() {
         float ratePerY = Float.parseFloat(PROPS.getProperty("trip.rate.perY"));
         float travelPlanDistanceFee = ratePerY * DISTANCE_Y;
-        float travelPlanPriorityFee = currentPriority * Float.parseFloat(
+        float travelPlanPriorityFee = Float.parseFloat(
                 PROPS.getProperty(String.format("trip.rate.priority%d", currentPriority)));
+
+        return travelPlanDistanceFee + travelPlanPriorityFee;
+    }
+
+    // This overload method is for when a passenger is not picked up, therefore weather needs to be considered
+    public float getExpectedFee(boolean isUrgent) {
+        float ratePerY = Float.parseFloat(PROPS.getProperty("trip.rate.perY"));
+        float travelPlanDistanceFee = ratePerY * DISTANCE_Y;
+        int tempPriority;
+        if(isUrgent)
+            tempPriority = NO_UMBRELLA_PRIORITY;
+        else
+            tempPriority = currentPriority;
+        float travelPlanPriorityFee = Float.parseFloat(
+                PROPS.getProperty(String.format("trip.rate.priority%d", tempPriority)));
 
         return travelPlanDistanceFee + travelPlanPriorityFee;
     }

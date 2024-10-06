@@ -65,7 +65,7 @@ public class GameEndScreen {
                     Window.getWidth() / 2 - STATUS_FONT.getWidth(GAME_LOST_TXT)/2, STATUS_Y);
         }
 
-        if (input.wasPressed(Keys.SPACE)) {
+        if (input.isDown(Keys.SPACE)) {
             return true;
         }
 

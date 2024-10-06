@@ -9,10 +9,12 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
     private final static int DIVISIBILITY = 400;
     private final static int SPAWN_Y_1 = -50;
     private final static int SPAWN_Y_2 = 768;
+    private final float FIREBALL_RADIUS;
 
     public EnemyCar(int x, int y, Properties props) {
 
         super(x, y, GameObjectType.ENEMY_CAR.name(), props);
+        FIREBALL_RADIUS = Float.parseFloat(super.getProps().getProperty("gameObjects.fireball.radius"));
     }
 
     @Override
@@ -29,7 +31,7 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
             newX = 0;
         }
         int newY = MiscUtils.selectAValue(SPAWN_Y_1, SPAWN_Y_2);
-        EnemyCar newEnemyCar = new EnemyCar(newX, SPAWN_Y_2 , props);
+        EnemyCar newEnemyCar = new EnemyCar(newX, newY, props);
         newEnemyCar.assignSpeed();
         return newEnemyCar;
     }
@@ -39,11 +41,18 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
         return MiscUtils.canSpawn(DIVISIBILITY);
     }
 
+    public FireBall makeFireBall(Properties props) {
+        if(MiscUtils.canSpawn(FireBall.getDivisibility()))
+            return new FireBall(super.getX(), (int) (super.getY() - super.getRadius() - FIREBALL_RADIUS), props);
+        else
+            return null;
+    }
+
     /**
      * check Collision with other objects
      */
     public void updateCollision(ArrayList<EnemyCar> enemyCars, ArrayList<OtherCar> otherCars,
-                                ArrayList<FireBall> fireBalls, Taxi taxi, Driver driver) {
+                                ArrayList<FireBall> fireBalls, Passenger[] passengers, Taxi taxi, Driver driver) {
         for(EnemyCar enemyCar : enemyCars){
             checkCollision(this, enemyCar);
         }
@@ -52,6 +61,10 @@ public class EnemyCar extends Car implements Generatable<EnemyCar>{
         }
         for(FireBall fireBall : fireBalls){
             checkCollision(this, fireBall);
+        }
+        for(Passenger passenger : passengers){
+            if(!taxi.getIsActive() || !passenger.getIsGetInTaxi())
+                checkCollision(this, passenger);
         }
         if(!taxi.getIsActive()) {
             checkCollision(this, driver);

@@ -40,6 +40,6 @@ public class HomeScreen {
         INSTRUCTION_FONT.drawString(INSTRUCTION, Window.getWidth() / 2 - INSTRUCTION_FONT.getWidth(TITLE)/2,
                 INSTRUCTION_Y);
 
-        return input.wasPressed(Keys.ENTER);
+        return input.isDown(Keys.ENTER);
     }
 }

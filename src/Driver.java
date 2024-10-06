@@ -5,21 +5,38 @@ import bagel.Keys;
 import java.util.Properties;
 
 public class Driver extends Character{
-    private final int HEALTH_X;
-    private final int HEALTH_Y;
+    private final int TAXI_HEALTH_X;
+    private final int TAXI_HEALTH_Y;
+    private final float RADIUS;
+    private final static int EJECTION_OFFSET = 50;
     private final int TAXI_GET_IN_RADIUS;
+
+    private Star starPower;
 
     public Driver(int x, int y, Properties props) {
         super(x, y, GameObjectType.DRIVER.name(), props);
-        HEALTH_X = Integer.parseInt(props.getProperty("gamePlay.driverHealth.x"));
-        HEALTH_Y = Integer.parseInt(props.getProperty("gamePlay.driverHealth.y"));
+        TAXI_HEALTH_X = Integer.parseInt(props.getProperty("gamePlay.driverHealth.x"));
+        TAXI_HEALTH_Y = Integer.parseInt(props.getProperty("gamePlay.driverHealth.y"));
+        RADIUS = Integer.parseInt(props.getProperty("gameObjects.driver.radius"));
         TAXI_GET_IN_RADIUS = Integer.parseInt(props.getProperty("gameObjects.driver.taxiGetInRadius"));
+    }
+
+
+    public float getRadius(){
+        return RADIUS;
+    }
+    public boolean checkStarPower() {
+        if(starPower == null)
+            return false;
+        return starPower.applyEffect();
     }
     /**
      * Update the driver status, move according to the input, active taxi and ejection status.
      * @param input The current mouse/keyboard input.
      * @param taxi The active taxi in the game play.
      */
+
+
     public void updateWithTaxi(Input input, Taxi taxi) {
         updateCollision(input);
         if(!taxi.getIsActive()) {
@@ -71,10 +88,10 @@ public class Driver extends Character{
         }
     }
 
+
     public boolean checkPostCollision(){
         return super.getMaxTimeOut() - super.getTimeOut() <= super.getPostCollisionTime();
     }
-
     public void adjustToInputMovement(Input input) {
         if(input != null) {
             if (input.isDown(Keys.LEFT)) {
@@ -90,8 +107,18 @@ public class Driver extends Character{
         }
     }
 
+    public <T extends Power> void collectPower(T t) {
+        starPower = (Star) t;
+    }
+
     @Override
     public void hasCollided(int diffY, int damage){
+        if(this.checkStarPower())
+            damage = 0;
         super.hasCollided(diffY, damage);
     }
+
+
+
+
 }

@@ -1,6 +1,6 @@
 import java.util.ArrayList;
 
-public class Weather {
+public class Weather implements Comparable<Weather>{
     private final String WEATHER;
     private final static String SUNNY_WEATHER = "SUNNY";
     private final int START_FRAME;
@@ -27,13 +27,16 @@ public class Weather {
     }
 
     //getters and setters\
-    public int getStartFrame() {
-        return START_FRAME;
-    }
     public int getEndFrame() {
         return END_FRAME;
     }
     public static int getWeatherIndex() {
         return weatherIndex;
     }
+
+    @Override
+    public int compareTo(Weather weather) {
+        return Integer.compare(END_FRAME, weather.getEndFrame());
+    }
+
 }

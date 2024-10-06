@@ -28,7 +28,7 @@ public class OtherCar extends Car implements Generatable<OtherCar>{
             newX = 0;
         }
         int newY = MiscUtils.selectAValue(SPAWN_Y_1, SPAWN_Y_2);
-        OtherCar newOtherCar = new OtherCar(newX, SPAWN_Y_2 , props);
+        OtherCar newOtherCar = new OtherCar(newX, newY, props);
         newOtherCar.assignSpeed();
         return newOtherCar;
     }
@@ -42,12 +42,16 @@ public class OtherCar extends Car implements Generatable<OtherCar>{
      * check Collision with other objects
      */
     public void updateCollision(ArrayList<OtherCar> otherCars, ArrayList<FireBall> fireBalls,
-                                Taxi taxi, Driver driver) {
+                                Passenger[] passengers, Taxi taxi, Driver driver) {
         for(OtherCar otherCar : otherCars){
             checkCollision(this, otherCar);
         }
         for(FireBall fireBall : fireBalls){
             checkCollision(this, fireBall);
+        }
+        for(Passenger passenger : passengers){
+            if(!taxi.getIsActive() || !passenger.getIsGetInTaxi())
+                checkCollision(this, passenger);
         }
         if(!taxi.getIsActive())
             checkCollision(this, driver);

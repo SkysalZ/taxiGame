@@ -1,11 +1,14 @@
 import bagel.Font;
 import bagel.Input;
+import bagel.Keys;
+import bagel.Window;
 
 import java.lang.reflect.Array;
+import java.sql.SQLOutput;
 import java.util.*;
 
 /**
- * Represents the gamePlay screen in the game.
+ * Represents the gameplay screen in the game.
  */
 public class GamePlayScreen{
     private final Properties GAME_PROPS;
@@ -14,6 +17,7 @@ public class GamePlayScreen{
     // keep track of earning and coin timout
     private float totalEarnings;
     private float coinFramesActive;
+    private float starFramesActive;
 
     private int currFrame = 0;
 
@@ -22,19 +26,23 @@ public class GamePlayScreen{
     private Driver driver;
     private Passenger[] passengers;
     private Coin[] coins;
+    private Star[] stars;
     private ArrayList<Weather> weathers;
     private Background background1;
     private Background background2;
     private ArrayList<EnemyCar> enemyCars;
     private ArrayList<OtherCar> otherCars;
     private ArrayList<FireBall> fireBalls;
+    private ArrayList<Taxi> brokenTaxi;
 
     private final float TARGET;
     private final int MAX_FRAMES;
 
+
     // vars for save score into the file
     private final String PLAYER_NAME;
     private boolean savedData;
+
 
     // display text vars
     private final Font INFO_FONT;
@@ -46,6 +54,12 @@ public class GamePlayScreen{
     private final int TARGET_Y;
     private final int MAX_FRAMES_X;
     private final int MAX_FRAMES_Y;
+    private final int TAXI_HEALTH_X;
+    private final int TAXI_HEALTH_Y;
+    private final int DRIVER_HEALTH_X;
+    private final int DRIVER_HEALTH_Y;
+    private final int PASSENGER_HEALTH_X;
+    private final int PASSENGER_HEALTH_Y;
 
     private final int TRIP_INFO_X;
     private final int TRIP_INFO_Y;
@@ -63,6 +77,7 @@ public class GamePlayScreen{
         enemyCars = new ArrayList<>();
         otherCars = new ArrayList<>();
         fireBalls = new ArrayList<>();
+        brokenTaxi = new ArrayList<>();
         populateWeather(weatherLines);
         ArrayList<String[]> objectLines = IOUtils.readCommaSeperatedFile(gameProps.getProperty("gamePlay.objectsFile"));
         populateGameObjects(objectLines);
@@ -80,6 +95,12 @@ public class GamePlayScreen{
         TARGET_Y = Integer.parseInt(gameProps.getProperty("gamePlay.target.y"));
         MAX_FRAMES_X = Integer.parseInt(gameProps.getProperty("gamePlay.maxFrames.x"));
         MAX_FRAMES_Y = Integer.parseInt(gameProps.getProperty("gamePlay.maxFrames.y"));
+        TAXI_HEALTH_X = Integer.parseInt(gameProps.getProperty("gamePlay.taxiHealth.x"));
+        TAXI_HEALTH_Y = Integer.parseInt(gameProps.getProperty("gamePlay.taxiHealth.y"));
+        DRIVER_HEALTH_X = Integer.parseInt(gameProps.getProperty("gamePlay.driverHealth.x"));
+        DRIVER_HEALTH_Y = Integer.parseInt(gameProps.getProperty("gamePlay.driverHealth.y"));
+        PASSENGER_HEALTH_X = Integer.parseInt(gameProps.getProperty("gamePlay.passengerHealth.x"));
+        PASSENGER_HEALTH_Y = Integer.parseInt(gameProps.getProperty("gamePlay.passengerHealth.y"));
 
         // current trip info vars
         TRIP_INFO_X = Integer.parseInt(gameProps.getProperty("gamePlay.tripInfo.x"));
@@ -100,6 +121,7 @@ public class GamePlayScreen{
         for(String[] lineElement: lines) {
             weathers.add(new Weather(lineElement[0], lineElement[1],lineElement[2]));
         }
+        Collections.sort(weathers);
     }
     private void populateGameObjects(ArrayList<String[]> lines) {
 
@@ -116,19 +138,24 @@ public class GamePlayScreen{
         // Since you haven't learned Lists in Java, we have to use two for loops to iterate over the lines.
         int passengerCount = 0;
         int coinCount = 0;
+        int starCount = 0;
         for(String[] lineElement: lines) {
             if(lineElement[0].equals(GameObjectType.PASSENGER.name())) {
                 passengerCount++;
             } else if(lineElement[0].equals(GameObjectType.COIN.name())) {
                 coinCount++;
+            } else if(lineElement[0].equals(GameObjectType.INVINCIBLE_POWER.name())) {
+                starCount++;
             }
         }
         passengers = new Passenger[passengerCount];
         coins = new Coin[coinCount];
+        stars = new Star[starCount];
 
         // process each line in the file
         int passenger_idx = 0;
         int coin_idx = 0;
+        int star_idx = 0;
         for(String[] lineElement: lines) {
             int x = Integer.parseInt(lineElement[1]);
             int y = Integer.parseInt(lineElement[2]);
@@ -141,8 +168,9 @@ public class GamePlayScreen{
                 int priority = Integer.parseInt(lineElement[3]);
                 int travelEndX = Integer.parseInt(lineElement[4]);
                 int travelEndY = Integer.parseInt(lineElement[5]);
+                boolean umbrella = (Integer.parseInt(lineElement[6])) == 1;
 
-                Passenger passenger = new Passenger(x, y, priority, travelEndX, travelEndY, GAME_PROPS);
+                Passenger passenger = new Passenger(x, y, priority, travelEndX, travelEndY, umbrella, GAME_PROPS);
                 passengers[passenger_idx] = passenger;
                 passenger_idx++;
 
@@ -150,6 +178,10 @@ public class GamePlayScreen{
                 Coin coinPower = new Coin(x, y, this.GAME_PROPS);
                 coins[coin_idx] = coinPower;
                 coin_idx++;
+            } else if(lineElement[0].equals(GameObjectType.INVINCIBLE_POWER.name())) {
+                Star starPower = new Star(x, y, this.GAME_PROPS);
+                stars[star_idx] = starPower;
+                star_idx++;
             }
         }
     }
@@ -191,8 +223,9 @@ public class GamePlayScreen{
 
 
         for(Passenger passenger: passengers) {
-            passenger.updateWithTaxi(input, taxi);
+            passenger.update(input, taxi, driver, weathers.get(Weather.getWeatherIndex()).isSunny());
         }
+
         if(!fireBalls.isEmpty()) {
             for(int i = 0; i < fireBalls.size(); i++) {
                 if(fireBalls.get(i).getIsCollided()) {
@@ -200,37 +233,58 @@ public class GamePlayScreen{
                     continue;
                 }
                 fireBalls.get(i).update(input);
-                fireBalls.get(i).updateCollision(taxi);
+                fireBalls.get(i).updateCollision(passengers, taxi, driver);
             }
         }
         if (enemyCars != null) {
             for (int i = 0; i < enemyCars.size(); i++) {
                 EnemyCar thisEnemyCar = enemyCars.get(i);
-                thisEnemyCar.updateCollision(enemyCars, otherCars, fireBalls, taxi, driver);
+                if(thisEnemyCar.getHealth() <= 0 && thisEnemyCar.Broke()) {
+                    enemyCars.remove(i);
+                    continue;
+                }
+                FireBall tempFireBall = thisEnemyCar.makeFireBall(GAME_PROPS);
+                if (tempFireBall != null) {
+                    fireBalls.add(tempFireBall);
+                }
+                thisEnemyCar.updateCollision(enemyCars, otherCars, fireBalls, passengers, taxi, driver);
                 thisEnemyCar.update(input);
             }
         }
-
         if (otherCars != null) {
             for (int i = 0; i < otherCars.size(); i++) {
                 OtherCar thisOtherCar = otherCars.get(i);
-                thisOtherCar.updateCollision(otherCars, fireBalls, taxi, driver);
+                if(thisOtherCar.getHealth() <= 0 && thisOtherCar.Broke()) {
+                    otherCars.remove(i);
+                    continue;
+                }
+                thisOtherCar.updateCollision(otherCars, fireBalls, passengers, taxi, driver);
                 thisOtherCar.update(input);
             }
         }
 
-        taxi.update(input);
+        taxi.update(input, weathers.get(Weather.getWeatherIndex()).isSunny());
         totalEarnings = taxi.calculateTotalEarnings();
-
-        if(taxi.getHealth() <= 0 && taxi.getCollisionTime() < 0) {
-            taxi.newTaxi(driver);
+        for(Taxi thisbrokenTaxi: brokenTaxi) {
+            thisbrokenTaxi.updateBrokenTaxi(input);
         }
+        if(taxi.getHealth() <= 0 && taxi.getCollisionTime() < 0) {
+            brokenTaxi.add(new Taxi(taxi.getX(), taxi.getY(), GAME_PROPS));
+            taxi.newTaxi(driver);
+            for(Coin coin: coins) {
+                if(coin.getIsActive()) {
+                    coin.removePower();
+                }
+            }
+        }
+
         driver.updateWithTaxi(input, taxi);
+
         if(coins.length > 0) {
             int minFramesActive = coins[0].getMaxFrames();
             for(Coin coinPower: coins) {
                 coinPower.update(input);
-                coinPower.collide(taxi);
+                coinPower.collide(taxi, driver);
 
                 // check if there's active coin and finding the coin with maximum ttl
                 int framesActive = coinPower.getFramesActive();
@@ -240,10 +294,24 @@ public class GamePlayScreen{
             }
             coinFramesActive = minFramesActive;
         }
+        if(stars.length > 0) {
+            int minFramesActive = stars[0].getMaxFrames();
+            for(Star starPower: stars) {
+                starPower.update(input);
+                starPower.collide(taxi, driver);
+
+                // check if there's active coin and finding the coin with maximum ttl
+                int framesActive = starPower.getFramesActive();
+                if(starPower.getIsActive() && minFramesActive > framesActive) {
+                    minFramesActive = framesActive;
+                }
+            }
+            starFramesActive = minFramesActive;
+        }
 
         displayInfo();
 
-        return isGameOver() || isLevelCompleted();
+        return isLevelCompleted();
 
     }
 
@@ -257,6 +325,22 @@ public class GamePlayScreen{
         INFO_FONT.drawString(MSG_PROPS.getProperty("gamePlay.remFrames") + (MAX_FRAMES - currFrame), MAX_FRAMES_X,
                 MAX_FRAMES_Y);
 
+        INFO_FONT.drawString(MSG_PROPS.getProperty("gamePlay.taxiHealth") +
+                String.format("%d", taxi.getHealth()), TAXI_HEALTH_X, TAXI_HEALTH_Y);
+        INFO_FONT.drawString(MSG_PROPS.getProperty("gamePlay.driverHealth") +
+                String.format("%d", driver.getHealth()), DRIVER_HEALTH_X, DRIVER_HEALTH_Y);
+        int tempHealth = (int) (Float.parseFloat(GAME_PROPS.getProperty("gameObjects.passenger.health")) * 100);
+        for(Passenger passenger: passengers) {
+            if(passenger.getTrip() != null && !passenger.getTrip().isComplete()){
+                tempHealth = passenger.getHealth();
+                break;
+            }else if(passenger.getHealth() < tempHealth && passenger.getHealth() > 0 &&
+                    (passenger.getTrip() == null || !passenger.getTrip().isComplete())) {
+                tempHealth = passenger.getHealth();
+            }
+        }
+        INFO_FONT.drawString(MSG_PROPS.getProperty("gamePlay.passengerHealth") +
+                String.format("%d", tempHealth), PASSENGER_HEALTH_X, PASSENGER_HEALTH_Y);
         if(coins.length > 0 && coins[0].getMaxFrames() != coinFramesActive) {
             INFO_FONT.drawString(String.valueOf(Math.round(coinFramesActive)), COIN_X, COIN_Y);
         }
@@ -290,10 +374,11 @@ public class GamePlayScreen{
      * @return true if the game is over, false otherwise.
      */
     public boolean isGameOver() {
-        // Game is over if the current frame is greater than the max frames
-        boolean isGameOver = currFrame >= MAX_FRAMES;
+        // Game is over if the current frame is greater than the max frames, the driver or a passenger is dead, or a new
+        // goes off-screen without the driver getting in
+        boolean isGameOver = (currFrame >= MAX_FRAMES);
 
-        if(currFrame >= MAX_FRAMES && !savedData) {
+        if(isGameOver && !savedData) {
             savedData = true;
             IOUtils.writeLineToFile(GAME_PROPS.getProperty("gameEnd.scoresFile"), PLAYER_NAME + "," + totalEarnings);
         }
