@@ -317,9 +317,6 @@ public abstract class Car implements  Collidable{
             this.timeOut --;
         }
 
-        Font trial = new Font("res/FSO8BITR.TTF", 20);
-        trial.drawString(String.format("time: %d, HP: %d, ctime: %d", timeOut,health, collisionTime), x-30, y);
-
         if(this.smoke != null)
             this.smoke.update(this.x, this.y, input);
         if(this.fire != null)

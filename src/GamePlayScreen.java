@@ -43,6 +43,10 @@ public class GamePlayScreen{
     private final String PLAYER_NAME;
     private boolean savedData;
 
+    //game over checkers
+    private boolean passengerStatus;
+    private boolean driverStatus;
+    private boolean taxiStatus;
 
     // display text vars
     private final Font INFO_FONT;
@@ -223,6 +227,8 @@ public class GamePlayScreen{
 
 
         for(Passenger passenger: passengers) {
+            if(passenger.getHealth() <= 0 && passenger.getIsDead())
+                passengerStatus = true;
             passenger.update(input, taxi, driver, weathers.get(Weather.getWeatherIndex()).isSunny());
         }
 
@@ -264,6 +270,8 @@ public class GamePlayScreen{
         }
 
         taxi.update(input, weathers.get(Weather.getWeatherIndex()).isSunny());
+        if(taxi.getY() >= Window.getHeight())
+            taxiStatus = true;
         totalEarnings = taxi.calculateTotalEarnings();
         for(Taxi thisbrokenTaxi: brokenTaxi) {
             thisbrokenTaxi.updateBrokenTaxi(input);
@@ -279,6 +287,8 @@ public class GamePlayScreen{
         }
 
         driver.updateWithTaxi(input, taxi);
+        if(driver.getHealth() <= 0 && driver.getIsDead())
+            driverStatus = true;
 
         if(coins.length > 0) {
             int minFramesActive = coins[0].getMaxFrames();
@@ -311,7 +321,7 @@ public class GamePlayScreen{
 
         displayInfo();
 
-        return isLevelCompleted();
+        return isGameOver(passengerStatus, driverStatus, taxiStatus) || isLevelCompleted();
 
     }
 
@@ -373,10 +383,10 @@ public class GamePlayScreen{
      * Check if the game is over. If the game is over and not saved the score, save the score.
      * @return true if the game is over, false otherwise.
      */
-    public boolean isGameOver() {
+    public boolean isGameOver(boolean passengerStatus, boolean driverStatus, boolean taxiStatus) {
         // Game is over if the current frame is greater than the max frames, the driver or a passenger is dead, or a new
         // goes off-screen without the driver getting in
-        boolean isGameOver = (currFrame >= MAX_FRAMES);
+        boolean isGameOver = (currFrame >= MAX_FRAMES) || passengerStatus || driverStatus || taxiStatus;
 
         if(isGameOver && !savedData) {
             savedData = true;
