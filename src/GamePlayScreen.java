@@ -211,113 +211,14 @@ public class GamePlayScreen{
         background2.updateWeather(background1.getImage());
         background2.update(input, background1, weathers, currFrame);
 
-        EnemyCar tempEnemyCar = new EnemyCar(-1, -1, GAME_PROPS);
-        OtherCar tempOtherCar = new OtherCar(-1, -1, GAME_PROPS);
-
-        tempEnemyCar = Car.checkAndGenerate(tempEnemyCar, GAME_PROPS);
-        tempOtherCar = Car.checkAndGenerate(tempOtherCar, GAME_PROPS);
-
-        if(tempEnemyCar != null) {
-            enemyCars.add(tempEnemyCar);
-        }
-
-        if(tempOtherCar != null) {
-            otherCars.add(tempOtherCar);
-        }
-
-
-        for(Passenger passenger: passengers) {
-            if(passenger.getHealth() <= 0 && passenger.getIsDead())
-                passengerStatus = true;
-            passenger.update(input, taxi, driver, weathers.get(Weather.getWeatherIndex()).isSunny());
-        }
-
-        if(!fireBalls.isEmpty()) {
-            for(int i = 0; i < fireBalls.size(); i++) {
-                if(fireBalls.get(i).getIsCollided()) {
-                    fireBalls.remove(i);
-                    continue;
-                }
-                fireBalls.get(i).update(input);
-                fireBalls.get(i).updateCollision(passengers, taxi, driver);
-            }
-        }
-        if (enemyCars != null) {
-            for (int i = 0; i < enemyCars.size(); i++) {
-                EnemyCar thisEnemyCar = enemyCars.get(i);
-                if(thisEnemyCar.getHealth() <= 0 && thisEnemyCar.Broke()) {
-                    enemyCars.remove(i);
-                    continue;
-                }
-                FireBall tempFireBall = thisEnemyCar.makeFireBall(GAME_PROPS);
-                if (tempFireBall != null) {
-                    fireBalls.add(tempFireBall);
-                }
-                thisEnemyCar.updateCollision(enemyCars, otherCars, fireBalls, passengers, taxi, driver);
-                thisEnemyCar.update(input);
-            }
-        }
-        if (otherCars != null) {
-            for (int i = 0; i < otherCars.size(); i++) {
-                OtherCar thisOtherCar = otherCars.get(i);
-                if(thisOtherCar.getHealth() <= 0 && thisOtherCar.Broke()) {
-                    otherCars.remove(i);
-                    continue;
-                }
-                thisOtherCar.updateCollision(otherCars, fireBalls, passengers, taxi, driver);
-                thisOtherCar.update(input);
-            }
-        }
-
-        taxi.update(input, weathers.get(Weather.getWeatherIndex()).isSunny());
-        if(taxi.getY() >= Window.getHeight())
-            taxiStatus = true;
-        totalEarnings = taxi.calculateTotalEarnings();
-        for(Taxi thisbrokenTaxi: brokenTaxi) {
-            thisbrokenTaxi.updateBrokenTaxi(input);
-        }
-        if(taxi.getHealth() <= 0 && taxi.getCollisionTime() < 0) {
-            brokenTaxi.add(new Taxi(taxi.getX(), taxi.getY(), GAME_PROPS));
-            taxi.newTaxi(driver);
-            for(Coin coin: coins) {
-                if(coin.getIsActive()) {
-                    coin.removePower();
-                }
-            }
-        }
-
-        driver.updateWithTaxi(input, taxi);
-        if(driver.getHealth() <= 0 && driver.getIsDead())
-            driverStatus = true;
-
-        if(coins.length > 0) {
-            int minFramesActive = coins[0].getMaxFrames();
-            for(Coin coinPower: coins) {
-                coinPower.update(input);
-                coinPower.collide(taxi, driver);
-
-                // check if there's active coin and finding the coin with maximum ttl
-                int framesActive = coinPower.getFramesActive();
-                if(coinPower.getIsActive() && minFramesActive > framesActive) {
-                    minFramesActive = framesActive;
-                }
-            }
-            coinFramesActive = minFramesActive;
-        }
-        if(stars.length > 0) {
-            int minFramesActive = stars[0].getMaxFrames();
-            for(Star starPower: stars) {
-                starPower.update(input);
-                starPower.collide(taxi, driver);
-
-                // check if there's active coin and finding the coin with maximum ttl
-                int framesActive = starPower.getFramesActive();
-                if(starPower.getIsActive() && minFramesActive > framesActive) {
-                    minFramesActive = framesActive;
-                }
-            }
-            starFramesActive = minFramesActive;
-        }
+        enemyCarsUpdate(input);
+        otherCarsUpdate(input);
+        fireBallsUpdate(input);
+        passengersUpdate(input);
+        taxiUpdate(input);
+        driverUpdate(input);
+        coinUpdate(input);
+        starUpdate(input);
 
         displayInfo();
 
@@ -407,5 +308,138 @@ public class GamePlayScreen{
             IOUtils.writeLineToFile(GAME_PROPS.getProperty("gameEnd.scoresFile"), PLAYER_NAME + "," + totalEarnings);
         }
         return isLevelCompleted;
+    }
+
+
+    /**
+     * updates game object updaters
+     */
+    private void enemyCarsUpdate(Input input) {
+        EnemyCar tempEnemyCar = new EnemyCar(-1, -1, GAME_PROPS);
+
+        tempEnemyCar = Car.checkAndGenerate(tempEnemyCar, GAME_PROPS);
+
+        if(tempEnemyCar != null) {
+            enemyCars.add(tempEnemyCar);
+        }
+
+        if (enemyCars != null) {
+            for (int i = 0; i < enemyCars.size(); i++) {
+                EnemyCar thisEnemyCar = enemyCars.get(i);
+                if(thisEnemyCar.getHealth() <= 0 && thisEnemyCar.Broke()) {
+                    enemyCars.remove(i);
+                    continue;
+                }
+                FireBall tempFireBall = thisEnemyCar.makeFireBall(GAME_PROPS);
+                if (tempFireBall != null) {
+                    fireBalls.add(tempFireBall);
+                }
+                thisEnemyCar.updateCollision(enemyCars, otherCars, fireBalls, passengers, taxi, driver);
+                thisEnemyCar.update(input);
+            }
+        }
+    }
+
+    private void otherCarsUpdate(Input input) {
+        OtherCar tempOtherCar = new OtherCar(-1, -1, GAME_PROPS);
+
+        tempOtherCar = Car.checkAndGenerate(tempOtherCar, GAME_PROPS);
+
+
+        if(tempOtherCar != null) {
+            otherCars.add(tempOtherCar);
+        }
+
+        if (otherCars != null) {
+            for (int i = 0; i < otherCars.size(); i++) {
+                OtherCar thisOtherCar = otherCars.get(i);
+                if(thisOtherCar.getHealth() <= 0 && thisOtherCar.Broke()) {
+                    otherCars.remove(i);
+                    continue;
+                }
+                thisOtherCar.updateCollision(otherCars, fireBalls, passengers, taxi, driver);
+                thisOtherCar.update(input);
+            }
+        }
+    }
+
+    private void fireBallsUpdate(Input input){
+        if(!fireBalls.isEmpty()) {
+            for(int i = 0; i < fireBalls.size(); i++) {
+                if(fireBalls.get(i).getIsCollided()) {
+                    fireBalls.remove(i);
+                    continue;
+                }
+                fireBalls.get(i).update(input);
+                fireBalls.get(i).updateCollision(passengers, taxi, driver);
+            }
+        }
+    }
+
+    private void passengersUpdate(Input input) {
+        for(Passenger passenger: passengers) {
+            if(passenger.getHealth() <= 0 && passenger.getIsDead())
+                passengerStatus = true;
+            passenger.update(input, taxi, driver, weathers.get(Weather.getWeatherIndex()).isSunny());
+        }
+    }
+
+    private void taxiUpdate(Input input) {
+        taxi.update(input, weathers.get(Weather.getWeatherIndex()).isSunny());
+        if(taxi.getY() >= Window.getHeight())
+            taxiStatus = true;
+        totalEarnings = taxi.calculateTotalEarnings();
+        for(Taxi thisbrokenTaxi: brokenTaxi) {
+            thisbrokenTaxi.updateBrokenTaxi(input);
+        }
+        if(taxi.getHealth() <= 0 && taxi.getCollisionTime() < 0) {
+            brokenTaxi.add(new Taxi(taxi.getX(), taxi.getY(), GAME_PROPS));
+            taxi.newTaxi(driver);
+            for(Coin coin: coins) {
+                if(coin.getIsActive()) {
+                    coin.removePower();
+                }
+            }
+        }
+    }
+
+    private void driverUpdate(Input input) {
+        driver.updateWithTaxi(input, taxi);
+        if(driver.getHealth() <= 0 && driver.getIsDead())
+            driverStatus = true;
+    }
+
+    private void coinUpdate(Input input) {
+        if(coins.length > 0) {
+            int minFramesActive = coins[0].getMaxFrames();
+            for(Coin coinPower: coins) {
+                coinPower.update(input);
+                coinPower.collide(taxi, driver);
+
+                // check if there's active coin and finding the coin with maximum ttl
+                int framesActive = coinPower.getFramesActive();
+                if(coinPower.getIsActive() && minFramesActive > framesActive) {
+                    minFramesActive = framesActive;
+                }
+            }
+            coinFramesActive = minFramesActive;
+        }
+    }
+
+    private void starUpdate(Input input) {
+        if(stars.length > 0) {
+            int minFramesActive = stars[0].getMaxFrames();
+            for(Star starPower: stars) {
+                starPower.update(input);
+                starPower.collide(taxi, driver);
+
+                // check if there's active coin and finding the coin with maximum ttl
+                int framesActive = starPower.getFramesActive();
+                if(starPower.getIsActive() && minFramesActive > framesActive) {
+                    minFramesActive = framesActive;
+                }
+            }
+            starFramesActive = minFramesActive;
+        }
     }
 }
