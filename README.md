@@ -78,12 +78,6 @@ Navigate an endless road as a taxi driver in a struggling economy! Pick up passe
    mvn clean package  
    java -jar target/shadowtaxi.jar
 ## 💡 Tips
-- Stay in lanes (360, 480, 620 x-coordinates) to avoid cars.
-
-- Use invincibility power strategically during heavy traffic.
-
-- Prioritize high-priority passengers for faster earnings!
-1. **Home Screen**: Press Enter to start.  
-2. **Player Info**: Enter your name.  
-3. **Game Play**: Navigate the endless road with dynamic weather.  
-4. **Game End**: View top 5 scores and win/loss message.  
+   - Stay in lanes (360, 480, 620 x-coordinates) to avoid cars.
+   - Use invincibility power strategically during heavy traffic.
+   - Prioritize high-priority passengers for faster earnings!
